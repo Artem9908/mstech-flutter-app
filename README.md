@@ -1,17 +1,76 @@
-# subscription_app
+# Subscription App
 
-A new Flutter project.
+Flutter-приложение с онбордингом, пейволлом и сохранением состояния подписки.
 
-## Getting Started
+## Архитектура
 
-This project is a starting point for a Flutter application.
+Приложение построено по простой сервисной архитектуре с разделением на экраны и сервисы:
 
-A few resources to get you started if this is your first Flutter project:
+```
+Запуск → SplashRouter → [проверка SharedPreferences]
+                            │
+                ┌───────────┴───────────┐
+                ▼                       ▼
+        OnboardingScreen           HomeScreen
+          (нет подписки)         (подписка активна)
+                │
+                ▼
+         PaywallScreen
+          (выбор плана)
+                │
+                ▼
+           HomeScreen
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+**Ключевые решения:**
+- **SharedPreferences** для хранения состояния подписки — простое и надёжное решение для эмуляции без реального биллинга
+- **SplashRouter** как точка входа — определяет начальный экран на основе сохранённого состояния, плавный переход с анимацией
+- **Сервисный слой** (`SubscriptionService`) — вся логика работы с данными изолирована от UI
+- **pushAndRemoveUntil** при покупке — полная очистка стека навигации, чтобы пользователь не мог вернуться на пейволл кнопкой «Назад»
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Структура проекта
+
+```
+lib/
+├── main.dart                           # Точка входа, MaterialApp, SplashRouter
+├── screens/
+│   ├── onboarding_screen.dart          # Онбординг (2 страницы, PageView)
+│   ├── paywall_screen.dart             # Пейволл (месяц/год, эмуляция покупки)
+│   └── home_screen.dart                # Главный экран (контент, категории)
+└── services/
+    └── subscription_service.dart       # Сервис подписки (SharedPreferences)
+```
+
+## Экраны
+
+| Экран | Описание |
+|-------|----------|
+| **SplashRouter** | Проверяет подписку и направляет на нужный экран с анимацией |
+| **OnboardingScreen** | 2 страницы с PageView, индикаторы, кнопка «Далее / Продолжить» |
+| **PaywallScreen** | Годовая (2 990 ₽, скидка 58%) и месячная (599 ₽) подписки, диалог подтверждения покупки |
+| **HomeScreen** | Баннер Premium, горизонтальные категории, список рекомендаций, кнопка сброса подписки |
+
+## Технологии
+
+- **Flutter 3.41.0** (Dart 3.11.0)
+- **shared_preferences** — локальное хранение состояния подписки
+- **Material 3** — современный дизайн-система
+
+## Запуск
+
+```bash
+flutter pub get
+flutter run
+```
+
+## Что бы улучшил при большем времени
+
+- **State management** — внедрить Riverpod или BLoC для масштабируемого управления состоянием
+- **Роутинг** — перейти на go_router с декларативной навигацией
+- **Реальный биллинг** — интеграция in_app_purchase / RevenueCat
+- **Аналитика** — Firebase Analytics + AppsFlyer для атрибуции
+- **Тесты** — unit-тесты для SubscriptionService, widget-тесты для экранов
+- **CI/CD** — GitHub Actions для автоматической сборки и деплоя
+- **Локализация** — intl для мультиязычности
+- **Анимации** — Lottie-анимации на онбординге вместо статичных иконок
+- **Дизайн** — Figma-макеты, адаптив под планшеты

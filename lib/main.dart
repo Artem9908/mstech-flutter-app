@@ -28,7 +28,8 @@ class SubscriptionApp extends StatelessWidget {
   }
 }
 
-/// Определяет начальный экран на основе состояния подписки
+/// Splash-экран: проверяет подписку в SharedPreferences
+/// и направляет на нужный экран
 class SplashRouter extends StatefulWidget {
   const SplashRouter({super.key});
 
@@ -36,33 +37,100 @@ class SplashRouter extends StatefulWidget {
   State<SplashRouter> createState() => _SplashRouterState();
 }
 
-class _SplashRouterState extends State<SplashRouter> {
+class _SplashRouterState extends State<SplashRouter>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _scaleAnim;
+
   @override
   void initState() {
     super.initState();
-    _navigate();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scaleAnim = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutBack,
+    );
+    _animController.forward();
+    _checkSubscriptionAndNavigate();
   }
 
-  Future<void> _navigate() async {
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkSubscriptionAndNavigate() async {
+    // Читаем состояние подписки из SharedPreferences
     final isSubscribed = await SubscriptionService.isSubscribed();
+
+    // Небольшая задержка для отображения splash-экрана
+    await Future.delayed(const Duration(milliseconds: 1200));
 
     if (!mounted) return;
 
-    final destination = isSubscribed
-        ? const HomeScreen()
-        : const OnboardingScreen();
+    final Widget destination;
+    if (isSubscribed) {
+      // Подписка сохранена — сразу на главный экран
+      destination = const HomeScreen();
+    } else {
+      // Подписки нет — показываем онбординг
+      destination = const OnboardingScreen();
+    }
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => destination),
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => destination,
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFF1A1A2E),
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
       body: Center(
-        child: CircularProgressIndicator(color: Color(0xFFE94560)),
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE94560), Color(0xFF0F3460)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.star_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'SubApp',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
